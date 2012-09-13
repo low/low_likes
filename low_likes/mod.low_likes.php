@@ -101,15 +101,15 @@ class Low_likes {
 
 		$likes = isset($likes[$entry_id]) ? $likes[$entry_id] : array();
 
-        // Compose variables for tagdata
-        $vars = array(
-        	'total_likes' => count($likes),
-        	'is_liked'    => in_array($this->member_id, $likes),
-        	'has_form'    => $form
-        );
+		// Compose variables for tagdata
+		$vars = array(
+			'total_likes' => count($likes),
+			'is_liked'    => in_array($this->member_id, $likes),
+			'has_form'    => $form
+		);
 
-        // Parse the tagdata
-        $tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $vars);
+		// Parse the tagdata
+		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $vars);
 
 		// --------------------------------------
 		// Are we showing a form?
