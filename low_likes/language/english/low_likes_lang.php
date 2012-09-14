@@ -21,6 +21,19 @@ $lang = array(
 "low_likes_module_description" =>
 "Facebook-like Likes",
 
+"popular_entries" =>
+"Popular Entries",
+
+"active_members" =>
+"Active Members",
+
+//----------------------------------------
+// Popular entries page
+//----------------------------------------
+
+"num_likes" =>
+"Number of Likes",
+
 /* END */
 ''=>''
 );

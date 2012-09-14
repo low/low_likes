@@ -63,7 +63,8 @@ class Low_likes {
 	/**
 	 * Show Likes for given entry, possibly wrapped around a form tag
 	 *
-	 *
+	 * @access     public
+	 * @return     string
 	 */
 	public function show()
 	{
@@ -80,7 +81,7 @@ class Low_likes {
 		if ( ! ($entry_id = $this->EE->TMPL->fetch_param('entry_id')))
 		{
 			// Make a note of it in the template log
-			$this->EE->TMPL->log_item('Low Likes: no entry_id given in Form tag');
+			$this->EE->TMPL->log_item('Low Likes: no entry_id given in Show tag');
 
 			// And return raw data
 			return $tagdata;
@@ -143,6 +144,55 @@ class Low_likes {
 	// --------------------------------------------------------------------
 
 	/**
+	 * Show entries liked by logged in member
+	 *
+	 * @access     public
+	 * @return     string
+	 */
+	public function entries()
+	{
+		// --------------------------------------
+		// Display no_results for guests
+		// --------------------------------------
+
+		if ( ! $this->member_id)
+		{
+			return $this->EE->TMPL->no_results();
+		}
+
+		// --------------------------------------
+		// Initiate return data
+		// --------------------------------------
+
+		$tagdata = $this->EE->TMPL->tagdata;
+
+		// --------------------------------------
+		// Get entries for logged in members
+		// --------------------------------------
+
+		// Query DB
+		$query = $this->EE->db->select('entry_id')
+		       ->from('low_likes')
+		       ->where('member_id', $this->member_id)
+		       ->order_by('like_date', 'desc')
+		       ->get();
+
+		// Get results
+		$entries = array();
+
+		foreach ($query->result() AS $row)
+		{
+			$entries[] = $row->entry_id;
+		}
+
+		$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entries);
+
+		return $this->_channel_entries();
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
 	 * ACT: (un)like posted entry
 	 *
 	 * @access     public
@@ -195,6 +245,70 @@ class Low_likes {
 
 		$this->EE->functions->redirect($this->EE->session->tracker[1]);
 	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * Loads the Channel module and runs its entries() method
+	 *
+	 * @access      private
+	 * @return      void
+	 */
+	private function _channel_entries()
+	{
+		// --------------------------------------
+		// Make sure the following params are set
+		// --------------------------------------
+
+		$set_params = array(
+			'dynamic'  => 'no',
+			'paginate' => 'bottom'
+		);
+
+		foreach ($set_params AS $key => $val)
+		{
+			if ( ! $this->EE->TMPL->fetch_param($key))
+			{
+				$this->EE->TMPL->tagparams[$key] = $val;
+			}
+		}
+
+		// --------------------------------------
+		// Take care of related entries
+		// --------------------------------------
+
+		// We must do this, 'cause the template engine only does it for
+		// channel:entries or search:search_results.
+		$this->EE->TMPL->tagdata = $this->EE->TMPL->assign_relationship_data($this->EE->TMPL->tagdata);
+
+		// Add related markers to single vars to trigger replacement
+		foreach ($this->EE->TMPL->related_markers AS $var)
+		{
+			$this->EE->TMPL->var_single[$var] = $var;
+		}
+
+		// --------------------------------------
+		// Get channel module
+		// --------------------------------------
+
+		if ( ! class_exists('channel'))
+		{
+			require_once PATH_MOD.'channel/mod.channel.php';
+		}
+
+		// --------------------------------------
+		// Create new Channel instance
+		// --------------------------------------
+
+		$channel = new Channel;
+
+		// --------------------------------------
+		// Let the Channel module do all the heavy lifting
+		// --------------------------------------
+
+		return $channel->entries();
+	}
+
 
 } // End Class
 
