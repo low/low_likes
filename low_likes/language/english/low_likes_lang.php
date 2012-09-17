@@ -27,9 +27,8 @@ $lang = array(
 "active_members" =>
 "Active Members",
 
-//----------------------------------------
-// Popular entries page
-//----------------------------------------
+"no_likes" =>
+"No-one likes anything!",
 
 "num_likes" =>
 "Number of Likes",

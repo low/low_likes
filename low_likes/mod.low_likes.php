@@ -161,13 +161,7 @@ class Low_likes {
 		}
 
 		// --------------------------------------
-		// Initiate return data
-		// --------------------------------------
-
-		$tagdata = $this->EE->TMPL->tagdata;
-
-		// --------------------------------------
-		// Get entries for logged in members
+		// Get entries for logged in member
 		// --------------------------------------
 
 		// Query DB
@@ -177,17 +171,82 @@ class Low_likes {
 		       ->order_by('like_date', 'desc')
 		       ->get();
 
-		// Get results
-		$entries = array();
+		// Initiate entry_id array
+		$entry_ids = array();
 
+		// Flatten the queryr results
 		foreach ($query->result() AS $row)
 		{
-			$entries[] = $row->entry_id;
+			$entry_ids[] = $row->entry_id;
 		}
 
-		$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entries);
+		// --------------------------------------
+		// Do we have Liked entries?
+		// --------------------------------------
 
-		return $this->_channel_entries();
+		if ($entry_ids)
+		{
+			// Set the fixed_order param ourselves
+			$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
+
+			// And then call the Channel::entries() method
+			return $this->_channel_entries();
+		}
+		else
+		{
+			// Or return no_results when there are none
+			return $this->EE->TMPL->no_results();
+		}
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * Show entries with most likes
+	 *
+	 * @access     public
+	 * @return     string
+	 */
+	public function popular()
+	{
+		// --------------------------------------
+		// Get top entries
+		// --------------------------------------
+
+		// Query DB
+		$query = $this->EE->db->select(array('entry_id', 'COUNT(*) AS num_likes'))
+		       ->from('low_likes')
+		       ->group_by('entry_id')
+		       ->having('num_likes >', '0')
+		       ->order_by('num_likes', 'desc')
+		       ->get();
+
+		// Initiate entry_id array
+		$entry_ids = array();
+
+		// Flatten the queryr results
+		foreach ($query->result() AS $row)
+		{
+			$entry_ids[] = $row->entry_id;
+		}
+
+		// --------------------------------------
+		// Do we have Liked entries?
+		// --------------------------------------
+
+		if ($entry_ids)
+		{
+			// Set the fixed_order param ourselves
+			$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
+
+			// And then call the Channel::entries() method
+			return $this->_channel_entries();
+		}
+		else
+		{
+			// Or return no_results when there are none
+			return $this->EE->TMPL->no_results();
+		}
 	}
 
 	// --------------------------------------------------------------------

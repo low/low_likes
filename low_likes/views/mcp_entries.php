@@ -19,6 +19,6 @@
 
 <?php else: ?>
 
-	<p><?=lang('no_entries')?></p>
+	<p><?=lang('no_likes')?></p>
 
 <?php endif; ?>

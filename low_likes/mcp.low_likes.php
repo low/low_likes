@@ -81,8 +81,8 @@ class Low_likes_mcp {
 
 		$this->site_id = $this->EE->config->item('site_id');
 		$this->mod_url = BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module='.LOW_LIKES_PACKAGE;
-		$this->entry_url = BASE.AMP.'C=content_publish'.AMP.'M=entry_form'.AMP.'channel_id=%s'.AMP.'entry_id=%s';
-		$this->member_url = BASE.AMP.'C=myaccount'.AMP.'id=%s';
+		$this->entry_url = $this->mod_url.AMP.'view=entry'.AMP.'id=%s';
+		$this->member_url = $this->mod_url.AMP.'view=member'.AMP.'id=%s';
 	}
 
 	/**
@@ -94,11 +94,24 @@ class Low_likes_mcp {
 	public function index()
 	{
 		// --------------------------------------
-		// Page title
+		// What are we viewing?
 		// --------------------------------------
 
-		$this->EE->cp->set_variable('cp_page_title', lang('low_likes_module_name'));
-		$this->_nav();
+		$id = $this->EE->input->get('id');
+		$view = $this->EE->input->get('view');
+
+		if ($id && $view == 'entry')
+		{
+			$this->EE->db->where('l.entry_id', $id, FALSE);
+		}
+		elseif ($id && $view == 'member')
+		{
+			$this->EE->db->where('l.member_id', $id, FALSE);
+		}
+		else
+		{
+			$view = 'index';
+		}
 
 		// --------------------------------------
 		// Retrieve list of likes
@@ -107,8 +120,7 @@ class Low_likes_mcp {
 		// Items to get
 		$select = array(
 			'l.entry_id', 'l.member_id', 'l.like_date',
-			't.channel_id', 't.title',
-			'm.screen_name'
+			't.title', 'm.screen_name'
 		);
 
 		// Query DB
@@ -130,7 +142,7 @@ class Low_likes_mcp {
 		foreach ($likes AS &$row)
 		{
 			$row['like_date']  = $this->EE->localize->set_human_time($row['like_date']);
-			$row['entry_url']  = sprintf($this->entry_url, $row['channel_id'], $row['entry_id']);
+			$row['entry_url']  = sprintf($this->entry_url, $row['entry_id']);
 			$row['member_url'] = sprintf($this->member_url, $row['member_id']);
 		}
 
@@ -138,7 +150,33 @@ class Low_likes_mcp {
 		// Add likes to result array and feed to view
 		// --------------------------------------
 
-		$vars = array('likes' => $likes);
+		$vars = array(
+			'view'  => $view,
+			'likes' => $likes
+		);
+
+		// --------------------------------------
+		// Page title
+		// --------------------------------------
+
+		switch ($view)
+		{
+			case 'entry':
+				$title = $query->row('title');
+				$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
+			break;
+
+			case 'member':
+				$title = $query->row('screen_name');
+				$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
+			break;
+
+			default:
+				$title = lang('low_likes_module_name');
+		}
+
+		$this->EE->cp->set_variable('cp_page_title', $title);
+		$this->_nav();
 
 		return $this->EE->load->view('mcp_index', $vars, TRUE);
 	}
@@ -153,14 +191,6 @@ class Low_likes_mcp {
 	 */
 	public function entries()
 	{
-		// --------------------------------------
-		// Page title
-		// --------------------------------------
-
-		$this->EE->cp->set_variable('cp_page_title', lang('popular_entries'));
-		$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
-		$this->_nav();
-
 		// --------------------------------------
 		// Retrieve list of entries
 		// --------------------------------------
@@ -189,7 +219,7 @@ class Low_likes_mcp {
 
 		foreach ($entries AS &$row)
 		{
-			$row['entry_url'] = sprintf($this->entry_url, $row['channel_id'], $row['entry_id']);
+			$row['entry_url'] = sprintf($this->entry_url, $row['entry_id']);
 		}
 
 		// --------------------------------------
@@ -197,6 +227,14 @@ class Low_likes_mcp {
 		// --------------------------------------
 
 		$vars = array('entries' => $entries);
+
+		// --------------------------------------
+		// Page title
+		// --------------------------------------
+
+		$this->EE->cp->set_variable('cp_page_title', lang('popular_entries'));
+		$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
+		$this->_nav();
 
 		return $this->EE->load->view('mcp_entries', $vars, TRUE);
 	}
@@ -211,14 +249,6 @@ class Low_likes_mcp {
 	 */
 	public function members()
 	{
-		// --------------------------------------
-		// Page title
-		// --------------------------------------
-
-		$this->EE->cp->set_variable('cp_page_title', lang('active_members'));
-		$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
-		$this->_nav();
-
 		// --------------------------------------
 		// Retrieve list of members
 		// --------------------------------------
@@ -256,6 +286,14 @@ class Low_likes_mcp {
 
 		$vars = array('members' => $members);
 
+		// --------------------------------------
+		// Page title
+		// --------------------------------------
+
+		$this->EE->cp->set_variable('cp_page_title', lang('active_members'));
+		$this->EE->cp->set_breadcrumb($this->mod_url, lang('low_likes_module_name'));
+		$this->_nav();
+
 		return $this->EE->load->view('mcp_members', $vars, TRUE);
 	}
 
@@ -270,6 +308,7 @@ class Low_likes_mcp {
 	 */
 	private function _nav()
 	{
+		$this->EE->cp->load_package_css(LOW_LIKES_PACKAGE.'&amp;v='.time());
 		$this->EE->cp->set_right_nav(array(
 			'low_likes_module_name' => $this->mod_url,
 			'popular_entries' => $this->mod_url.AMP.'method=entries',
