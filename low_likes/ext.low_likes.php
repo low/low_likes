@@ -132,39 +132,28 @@ class Low_likes_ext {
 		}
 
 		// -------------------------------------------
-		// Get all entry ids in current query
-		// -------------------------------------------
-
-		$entry_ids = array();
-
-		foreach ($entries AS $row)
-		{
-			$entry_ids[] = $row['entry_id'];
-		}
-
-		// -------------------------------------------
-		// Query DB for these entry ids
+		// Initiate likes for all given entry_ids
 		// -------------------------------------------
 
 		$likes = array();
+
+		foreach ($entries AS $row)
+		{
+			$likes[$row['entry_id']] = array();
+		}
+
+		// -------------------------------------------
+		// Query DB for these entry_ids
+		// -------------------------------------------
+
 		$query = $this->EE->db->select('entry_id, member_id')
 		       ->from('low_likes')
-		       ->where_in('entry_id', $entry_ids)
+		       ->where_in('entry_id', array_keys($likes))
 		       ->get();
 
 		foreach ($query->result() AS $row)
 		{
 			$likes[$row->entry_id][] = $row->member_id;
-		}
-
-		// There could be entries without any likes;
-		// Set these to an empty array
-		foreach ($entry_ids AS $entry_id)
-		{
-			if ( ! isset($likes[$entry_id]))
-			{
-				$likes[$entry_id] = array();
-			}
 		}
 
 		// -------------------------------------------

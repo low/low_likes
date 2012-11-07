@@ -102,6 +102,17 @@ class Low_likes {
 
 		$likes = isset($likes[$entry_id]) ? $likes[$entry_id] : array();
 
+		// $likes = array();
+		// $query = $this->EE->db->select('member_id')
+		//        ->from('low_likes')
+		//        ->where('entry_id', $entry_id)
+		//        ->get();
+
+		// foreach ($query->result() AS $row)
+		// {
+		// 	$likes[] = $row->member_id;
+		// }
+
 		// Compose variables for tagdata
 		$vars = array(
 			'total_likes' => count($likes),
