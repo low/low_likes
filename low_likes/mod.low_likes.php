@@ -25,14 +25,6 @@ class Low_likes {
 	 */
 	private $EE;
 
-	/**
-	 * Shortcut to current member_id, which we'll need a lot
-	 *
-	 * @access      private
-	 * @var         int
-	 */
-	private $member_id;
-
 	// --------------------------------------------------------------------
 	// METHODS
 	// --------------------------------------------------------------------
@@ -50,12 +42,6 @@ class Low_likes {
 		// --------------------------------------
 
 		$this->EE =& get_instance();
-
-		// --------------------------------------
-		// Set shortcut
-		// --------------------------------------
-
-		$this->member_id = $this->EE->session->userdata('member_id');
 	}
 
 	// --------------------------------------------------------------------
@@ -75,7 +61,7 @@ class Low_likes {
 		$tagdata = $this->EE->TMPL->tagdata;
 
 		// --------------------------------------
-		// Entry ID is needed
+		// Get entry ID and bail out if it's not there
 		// --------------------------------------
 
 		if ( ! ($entry_id = $this->EE->TMPL->fetch_param('entry_id')))
@@ -91,32 +77,31 @@ class Low_likes {
 		// Are we showing a form later on?
 		// --------------------------------------
 
-		$form = (($this->EE->TMPL->fetch_param('form') == 'yes') && $this->member_id);
+		$form = (($this->EE->TMPL->fetch_param('form') == 'yes') &&
+				$this->EE->session->userdata('member_id'));
 
 		// --------------------------------------
 		// Get all Likes for this entry
 		// --------------------------------------
 
-		// Initiate likes array
-		$likes = $this->EE->session->cache(LOW_LIKES_PACKAGE, 'likes');
+		$likes = array();
+		$query = $this->EE->db->select('member_id')
+		       ->from('low_likes')
+		       ->where('entry_id', $entry_id)
+		       ->get();
 
-		$likes = isset($likes[$entry_id]) ? $likes[$entry_id] : array();
+		foreach ($query->result() AS $row)
+		{
+			$likes[] = $row->member_id;
+		}
 
-		// $likes = array();
-		// $query = $this->EE->db->select('member_id')
-		//        ->from('low_likes')
-		//        ->where('entry_id', $entry_id)
-		//        ->get();
+		// --------------------------------------
+		// Compose variables for tagdata and parse
+		// --------------------------------------
 
-		// foreach ($query->result() AS $row)
-		// {
-		// 	$likes[] = $row->member_id;
-		// }
-
-		// Compose variables for tagdata
 		$vars = array(
 			'total_likes' => count($likes),
-			'is_liked'    => in_array($this->member_id, $likes),
+			'is_liked'    => in_array($this->EE->session->userdata('member_id'), $likes),
 			'has_form'    => $form
 		);
 
@@ -124,7 +109,7 @@ class Low_likes {
 		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $vars);
 
 		// --------------------------------------
-		// Are we showing a form?
+		// If we're showing a form, generate it and wrap around tagdata
 		// --------------------------------------
 
 		if ($form)
