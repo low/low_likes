@@ -64,12 +64,13 @@ class Low_likes {
 		// Get entry ID and bail out if it's not there
 		// --------------------------------------
 
-		if ( ! ($entry_id = $this->EE->TMPL->fetch_param('entry_id')))
+		$entry_id = $this->EE->TMPL->fetch_param('entry_id');
+
+		if (empty($entry_id))
 		{
 			// Make a note of it in the template log
 			$this->EE->TMPL->log_item('Low Likes: no entry_id given in Show tag');
 
-			// And return raw data
 			return $tagdata;
 		}
 
@@ -85,10 +86,11 @@ class Low_likes {
 		// --------------------------------------
 
 		$likes = array();
+
 		$query = $this->EE->db->select('member_id')
-		       ->from('low_likes')
-		       ->where('entry_id', $entry_id)
-		       ->get();
+			   ->from('low_likes')
+			   ->where('entry_id', $entry_id)
+			   ->get();
 
 		foreach ($query->result() AS $row)
 		{
@@ -122,7 +124,7 @@ class Low_likes {
 
 			// Define default hidden fields
 			$data['hidden_fields'] = array(
-				'ACT' => $this->EE->functions->fetch_action_id(LOW_LIKES_PACKAGE, 'toggle_like'),
+				'ACT' => $this->EE->functions->fetch_action_id('Low_likes', 'toggle_like'),
 				'EID' => $entry_id
 			);
 
@@ -135,114 +137,7 @@ class Low_likes {
 		// --------------------------------------
 
 		return $tagdata;
-	}
 
-	// --------------------------------------------------------------------
-
-	/**
-	 * Show entries liked by logged in member
-	 *
-	 * @access     public
-	 * @return     string
-	 */
-	public function entries()
-	{
-		// --------------------------------------
-		// Display no_results for guests
-		// --------------------------------------
-
-		if ( ! $this->member_id)
-		{
-			return $this->EE->TMPL->no_results();
-		}
-
-		// --------------------------------------
-		// Get entries for logged in member
-		// --------------------------------------
-
-		// Query DB
-		$query = $this->EE->db->select('entry_id')
-		       ->from('low_likes')
-		       ->where('member_id', $this->member_id)
-		       ->order_by('like_date', 'desc')
-		       ->get();
-
-		// Initiate entry_id array
-		$entry_ids = array();
-
-		// Flatten the queryr results
-		foreach ($query->result() AS $row)
-		{
-			$entry_ids[] = $row->entry_id;
-		}
-
-		// --------------------------------------
-		// Do we have Liked entries?
-		// --------------------------------------
-
-		if ($entry_ids)
-		{
-			// Set the fixed_order param ourselves
-			$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
-
-			// And then call the Channel::entries() method
-			return $this->_channel_entries();
-		}
-		else
-		{
-			// Or return no_results when there are none
-			return $this->EE->TMPL->no_results();
-		}
-	}
-
-	// --------------------------------------------------------------------
-
-	/**
-	 * Show entries with most likes
-	 *
-	 * @access     public
-	 * @return     string
-	 */
-	public function popular()
-	{
-		// --------------------------------------
-		// Get top entries
-		// --------------------------------------
-
-		// Query DB
-		$query = $this->EE->db->select(array('entry_id', 'COUNT(*) AS num_likes'))
-		       ->from('low_likes')
-		       ->group_by('entry_id')
-		       ->having('num_likes >', '0')
-		       ->order_by('num_likes', 'desc')
-		       ->get();
-
-		// Initiate entry_id array
-		$entry_ids = array();
-
-		// Flatten the queryr results
-		foreach ($query->result() AS $row)
-		{
-			$entry_ids[] = $row->entry_id;
-		}
-
-		// --------------------------------------
-		// Do we have Liked entries?
-		// --------------------------------------
-
-		if ($entry_ids)
-		{
-			// Set the fixed_order param ourselves
-			$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
-
-			// And then call the Channel::entries() method
-			return $this->_channel_entries();
-		}
-		else
-		{
-			// Or return no_results when there are none
-			return $this->EE->TMPL->no_results();
-		}
 	}
 
 	// --------------------------------------------------------------------
@@ -260,17 +155,20 @@ class Low_likes {
 		// --------------------------------------
 
 		$entry_id = $this->EE->input->post('EID');
+		$member_id = $this->EE->session->userdata('member_id');
 
 		// --------------------------------------
-		// Only continue if we have an entry_id and a member_id
+		// if we have an entry_id and a member_id,
+		// add/remove a record to/from low_likes table,
+		// depending on whether a record already exists or not
 		// --------------------------------------
 
-		if ($entry_id && $this->member_id)
+		if ($entry_id && $member_id)
 		{
 			// Data to work with
 			$data = array(
 				'entry_id'  => $entry_id,
-				'member_id' => $this->member_id
+				'member_id' => $member_id
 			);
 
 			// Liked or not?
@@ -292,78 +190,165 @@ class Low_likes {
 			{
 				die($liked ? '-1' : '1');
 			}
+
 		}
 
 		// --------------------------------------
 		// Go back to where you came from
 		// --------------------------------------
 
-		$this->EE->functions->redirect($this->EE->session->tracker[1]);
+		$this->EE->functions->redirect($_SERVER['HTTP_REFERER']);
 	}
 
 	// --------------------------------------------------------------------
 
 	/**
-	 * Loads the Channel module and runs its entries() method
+	 * Show entries with most likes
 	 *
-	 * @access      private
-	 * @return      void
+	 * @access     public
+	 * @return     string
 	 */
-	private function _channel_entries()
+	public function popular()
 	{
 		// --------------------------------------
-		// Make sure the following params are set
+		// Get entry IDs ordered by count
 		// --------------------------------------
 
-		$set_params = array(
-			'dynamic'  => 'no',
-			'paginate' => 'bottom'
-		);
+        // Query DB
+        $query = $this->EE->db->select(array('entry_id', 'COUNT(*) AS num_likes'))
+               ->from('low_likes')
+               ->group_by('entry_id')
+               ->having('num_likes >', '0')
+               ->order_by('num_likes', 'desc')
+               ->get();
 
-		foreach ($set_params AS $key => $val)
+        // Initiate entry_ids array
+        $entry_ids = array();
+
+        // Flatten the query results
+        foreach ($query->result() AS $row)
+        {
+            $entry_ids[] = $row->entry_id;
+        }
+
+		// --------------------------------------
+		// Call channel:entries
+		// --------------------------------------
+
+		return $this->_channel_entries($entry_ids);
+	}
+
+	// --------------------------------------------------------------------
+
+	/**
+	 * Show entries liked by logged in member
+	 *
+	 * @access     public
+	 * @return     string
+	 */
+	public function entries()
+	{
+		// --------------------------------------
+		// Get member ID
+		// --------------------------------------
+
+		$member_id = $this->EE->session->userdata('member_id');
+
+		// --------------------------------------
+		// Show no results when no member ID
+		// --------------------------------------
+
+		if ( ! $member_id)
 		{
-			if ( ! $this->EE->TMPL->fetch_param($key))
-			{
-				$this->EE->TMPL->tagparams[$key] = $val;
-			}
+			return $this->EE->TMPL->no_results();
 		}
 
 		// --------------------------------------
-		// Take care of related entries
+		// Get entry IDs for member
 		// --------------------------------------
 
-		// We must do this, 'cause the template engine only does it for
-		// channel:entries or search:search_results.
-		$this->EE->TMPL->tagdata = $this->EE->TMPL->assign_relationship_data($this->EE->TMPL->tagdata);
+        // Query DB
+        $query = $this->EE->db->select('entry_id')
+               ->from('low_likes')
+               ->where('member_id', $member_id)
+               ->order_by('like_date', 'desc')
+               ->get();
 
-		// Add related markers to single vars to trigger replacement
-		foreach ($this->EE->TMPL->related_markers AS $var)
-		{
-			$this->EE->TMPL->var_single[$var] = $var;
-		}
+        // Initiate entry_ids array
+        $entry_ids = array();
 
-		// --------------------------------------
-		// Get channel module
-		// --------------------------------------
-
-		if ( ! class_exists('channel'))
-		{
-			require_once PATH_MOD.'channel/mod.channel.php';
-		}
+        // Flatten the query results
+        foreach ($query->result() AS $row)
+        {
+            $entry_ids[] = $row->entry_id;
+        }
 
 		// --------------------------------------
-		// Create new Channel instance
+		// Call channel:entries
+		// --------------------------------------
+
+		return $this->_channel_entries($entry_ids);
+	}
+
+	// --------------------------------------------------------------------
+
+    /**
+     * Loads the Channel module and runs its entries() method
+     *
+     * @access      private
+     * @return      string
+     */
+    private function _channel_entries($entry_ids = array())
+    {
+		// --------------------------------------
+		// Return no results if no entry IDs are given
+		// --------------------------------------
+
+    	if (empty($entry_ids))
+    	{
+    		return $this->EE->TMPL->no_results();
+    	}
+
+        // --------------------------------------
+        // Make sure the following params are set
+        // --------------------------------------
+
+        $params = array(
+            'dynamic'  => 'no',
+            'paginate' => 'bottom'
+        );
+
+        foreach ($params AS $key => $val)
+        {
+            if ( ! $this->EE->TMPL->fetch_param($key))
+            {
+                $this->EE->TMPL->tagparams[$key] = $val;
+            }
+        }
+
+		// --------------------------------------
+		// Set the fixed_order parameter
+		// --------------------------------------
+
+    	$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
+
+		// --------------------------------------
+		// Get the Channel module if it doesn't exist yet
+		// --------------------------------------
+
+        if ( ! class_exists('channel'))
+        {
+            require_once PATH_MOD.'channel/mod.channel.php';
+        }
+
+		// --------------------------------------
+		// Create new Channel instance and call entries() method
 		// --------------------------------------
 
 		$channel = new Channel;
 
-		// --------------------------------------
-		// Let the Channel module do all the heavy lifting
-		// --------------------------------------
-
 		return $channel->entries();
-	}
-
+    }
 
 } // End Class
 
