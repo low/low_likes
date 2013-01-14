@@ -85,17 +85,9 @@ class Low_likes {
 		// Get all Likes for this entry
 		// --------------------------------------
 
-		$likes = array();
+        $likes = $this->EE->session->cache(LOW_LIKES_PACKAGE, 'likes');
 
-		$query = $this->EE->db->select('member_id')
-			   ->from('low_likes')
-			   ->where('entry_id', $entry_id)
-			   ->get();
-
-		foreach ($query->result() AS $row)
-		{
-			$likes[] = $row->member_id;
-		}
+        $likes = isset($likes[$entry_id]) ? $likes[$entry_id] : array();
 
 		// --------------------------------------
 		// Compose variables for tagdata and parse

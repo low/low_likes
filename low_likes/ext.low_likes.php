@@ -8,7 +8,7 @@ include(PATH_THIRD.'low_likes/config.php');
  *
  *
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com/addons/lo
+ * @link           http://gotolow.com/addons/low-likes
  * @copyright      Copyright (c) 2009-2012, Low
  */
 class Low_likes_ext {
@@ -93,18 +93,10 @@ class Low_likes_ext {
 		// --------------------------------------
 
 		$this->EE =& get_instance();
-
-		// --------------------------------------
-		// Assign current settings
-		// --------------------------------------
-
-		$this->settings = $settings;
 	}
 
-	// --------------------------------------------------------------------
-
 	/**
-	 * Add like-vars to channel:entries data
+	 * Pre-load likes for given entries
 	 *
 	 * @access      public
 	 * @param       object
@@ -114,7 +106,7 @@ class Low_likes_ext {
 	public function channel_entries_query_result($obj, $entries)
 	{
 		// -------------------------------------------
-		// Get the latest version of $query
+		// Get the latest version of $entries
 		// -------------------------------------------
 
 		if ($this->EE->extensions->last_call !== FALSE)
@@ -126,7 +118,7 @@ class Low_likes_ext {
 		// Is there a low_likes tag here?
 		// -------------------------------------------
 
-		if ( ! strpos($this->EE->TMPL->tagdata, 'exp:low_likes:'))
+		if ( ! strpos($this->EE->TMPL->tagdata, 'exp:low_likes:show'))
 		{
 			return $entries;
 		}
@@ -163,10 +155,11 @@ class Low_likes_ext {
 		$this->EE->session->set_cache(LOW_LIKES_PACKAGE, 'likes', $likes);
 
 		// -------------------------------------------
-		// Return query
+		// Return $entries
 		// -------------------------------------------
 
 		return $entries;
+
 	}
 
 	/**
@@ -182,10 +175,13 @@ class Low_likes_ext {
 		// -------------------------------------------
 		// Remove likes with given entry_id
 		// -------------------------------------------
+
+		$this->EE->db->where('entry_id', $entry_id);
+		$this->EE->db->delete('low_likes');
 	}
 
 	/**
-	 * Remove likes when entry is deleted
+	 * Remove likes when member is deleted
 	 *
 	 * @access      public
 	 * @param       array
@@ -196,6 +192,9 @@ class Low_likes_ext {
 		// -------------------------------------------
 		// Remove likes with given member_ids
 		// -------------------------------------------
+
+		$this->EE->db->where_in('member_id', $member_ids);
+		$this->EE->db->delete('low_likes');
 	}
 
 	// --------------------------------------------------------------------

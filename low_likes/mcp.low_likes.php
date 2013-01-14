@@ -37,23 +37,23 @@ class Low_likes_mcp {
 	 * Shortcut to module URL
 	 *
 	 * @access      private
-	 * @var         int
+	 * @var         string
 	 */
 	private $mod_url;
 
 	/**
-	 * Shortcut to Edit Entry
+	 * Shortcut to single entry
 	 *
 	 * @access      private
-	 * @var         int
+	 * @var         string
 	 */
 	private $entry_url;
 
 	/**
-	 * Shortcut to Member account
+	 * Shortcut to single member
 	 *
 	 * @access      private
-	 * @var         int
+	 * @var         string
 	 */
 	private $member_url;
 
@@ -84,6 +84,8 @@ class Low_likes_mcp {
 		$this->entry_url = $this->mod_url.AMP.'view=entry'.AMP.'id=%s';
 		$this->member_url = $this->mod_url.AMP.'view=member'.AMP.'id=%s';
 	}
+
+	// --------------------------------------------------------------------
 
 	/**
 	 * Module landing page - list of recent likes
@@ -297,25 +299,23 @@ class Low_likes_mcp {
 		return $this->EE->load->view('mcp_members', $vars, TRUE);
 	}
 
-
 	// --------------------------------------------------------------------
 
 	/**
-	 * Add navigation to CP
+	 * Add navigation and CSS to CP
 	 *
 	 * @access     private
 	 * @return     void
 	 */
 	private function _nav()
 	{
-		$this->EE->cp->load_package_css(LOW_LIKES_PACKAGE.'&amp;v='.time());
 		$this->EE->cp->set_right_nav(array(
 			'low_likes_module_name' => $this->mod_url,
 			'popular_entries' => $this->mod_url.AMP.'method=entries',
 			'active_members'  => $this->mod_url.AMP.'method=members'
 		));
+
+		$this->EE->cp->load_package_css(LOW_LIKES_PACKAGE.'&amp;v='.time());
 	}
-
 }
-
 /* End of file mcp.low_likes.php */

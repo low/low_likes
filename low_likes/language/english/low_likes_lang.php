@@ -33,6 +33,9 @@ $lang = array(
 "num_likes" =>
 "Number of Likes",
 
+"member" =>
+"Member",
+
 /* END */
 ''=>''
 );
