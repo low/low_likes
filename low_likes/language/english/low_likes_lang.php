@@ -5,8 +5,8 @@
  *
  * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com/addons/low-likes
- * @copyright      Copyright (c) 2012, Low
+ * @link           https://github.com/lodewijk/low_likes
+ * @copyright      Copyright (c) 2013, Low
  */
 
 $lang = array(

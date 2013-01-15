@@ -6,10 +6,10 @@ include(PATH_THIRD.'low_likes/config.php');
 /**
  * Low Likes Extension class
  *
- *
+ * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com/addons/low-likes
- * @copyright      Copyright (c) 2009-2012, Low
+ * @link           https://github.com/lodewijk/low_likes
+ * @copyright      Copyright (c) 2013, Low
  */
 class Low_likes_ext {
 

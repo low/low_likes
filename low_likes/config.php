@@ -4,8 +4,9 @@
  * Low Likes config file
  *
  * @package        low_likes
- * @author         Lodewijk Schutte
- * @copyright      Copyright (c) 2012, Low
+ * @author         Lodewijk Schutte <hi@gotolow.com>
+ * @link           https://github.com/lodewijk/low_likes
+ * @copyright      Copyright (c) 2013, Low
  */
 
 if ( ! defined('LOW_LIKES_NAME'))
