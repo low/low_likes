@@ -4,7 +4,7 @@ Like and unlike entries and members.
 
 ## Tags
 
-### `{exp:low_likes:total}``
+### `{exp:low_likes:total}`
 
 Returns the total amount of likes (entries and members) by the logged in member.
 

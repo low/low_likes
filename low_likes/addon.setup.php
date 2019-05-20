@@ -5,7 +5,7 @@
  *
  * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com/
+ * @link           https://github.com/low/low_likes
  */
 
 return array(

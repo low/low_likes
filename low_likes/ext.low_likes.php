@@ -7,8 +7,8 @@ use Low\Likes\Service\Like;
  *
  * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           https://github.com/lodewijk/low_likes
- * @copyright      Copyright (c) 2013, Low
+ * @link           https://github.com/low/low_likes
+ * @copyright      Copyright (c) 2019, Low
  */
 class Low_likes_ext extends Low\Likes\Base {
 

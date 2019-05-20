@@ -7,7 +7,7 @@ namespace Low\Likes;
  *
  * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com
+ * @link           https://github.com/low/low_likes
  * @copyright      Copyright (c) 2019, Low
  */
 abstract class Base {

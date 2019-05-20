@@ -7,9 +7,9 @@ use EllisLab\ExpressionEngine\Service\Model\Model;
 /**
  * Low Likes Like Model class
  *
- * @package        low_lilkes
+ * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           http://gotolow.com/
+ * @link           https://github.com/low/low_likes
  * @copyright      Copyright (c) Low
  */
 class Like extends Model {
