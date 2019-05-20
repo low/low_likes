@@ -1,136 +1,97 @@
-<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
 
-// include config file
-include(PATH_THIRD.'low_likes/config.php');
+use Low\Likes\Service\Like;
 
 /**
  * Low Likes Module class
  *
  * @package        low_likes
  * @author         Lodewijk Schutte <hi@gotolow.com>
- * @link           https://github.com/lodewijk/low_likes
- * @copyright      Copyright (c) 2013, Low
+ * @link           https://github.com/low/low_likes
+ * @copyright      Copyright (c) 2019, Low
  */
-class Low_likes {
+class Low_likes extends Low\Likes\Base {
 
-	// --------------------------------------------------------------------
-	// PROPERTIES
-	// --------------------------------------------------------------------
+	protected $owner_id;
 
-	/**
-	 * EE Superobject
-	 *
-	 * @access      private
-	 * @var         object
-	 */
-	private $EE;
-
-	// --------------------------------------------------------------------
-	// METHODS
-	// --------------------------------------------------------------------
-
-	/**
-	 * Constructor
-	 *
-	 * @access     public
-	 * @return     void
-	 */
 	public function __construct()
 	{
-		// --------------------------------------
-		// Get global object
-		// --------------------------------------
-
-		$this->EE =& get_instance();
+		$this->owner_id = ee()->TMPL->fetch_param('owner_id',
+			ee()->session->userdata('member_id'));
 	}
 
-	// --------------------------------------------------------------------
-
-	/**
-	 * Show Likes for given entry, possibly wrapped around a form tag
-	 *
-	 * @access     public
-	 * @return     string
-	 */
-	public function show()
+	public function total()
 	{
-		// --------------------------------------
-		// Initiate return data
-		// --------------------------------------
-
-		$tagdata = $this->EE->TMPL->tagdata;
-
-		// --------------------------------------
-		// Get entry ID and bail out if it's not there
-		// --------------------------------------
-
-		$entry_id = $this->EE->TMPL->fetch_param('entry_id');
-
-		if (empty($entry_id))
-		{
-			// Make a note of it in the template log
-			$this->EE->TMPL->log_item('Low Likes: no entry_id given in Show tag');
-
-			return $tagdata;
-		}
-
-		// --------------------------------------
-		// Are we showing a form later on?
-		// --------------------------------------
-
-		$form = (($this->EE->TMPL->fetch_param('form') == 'yes') &&
-				$this->EE->session->userdata('member_id'));
-
-		// --------------------------------------
-		// Get all Likes for this entry
-		// --------------------------------------
-
-        $likes = $this->EE->session->cache(LOW_LIKES_PACKAGE, 'likes');
-
-        $likes = isset($likes[$entry_id]) ? $likes[$entry_id] : array();
-
-		// --------------------------------------
-		// Compose variables for tagdata and parse
-		// --------------------------------------
-
-		$vars = array(
-			'total_likes' => count($likes),
-			'is_liked'    => in_array($this->EE->session->userdata('member_id'), $likes),
-			'has_form'    => $form
-		);
-
-		// Parse the tagdata
-		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $vars);
-
-		// --------------------------------------
-		// If we're showing a form, generate it and wrap around tagdata
-		// --------------------------------------
-
-		if ($form)
-		{
-			// Initiate data array for form creation
-			$data = array(
-				'id'    => $this->EE->TMPL->fetch_param('form_id'),
-				'class' => $this->EE->TMPL->fetch_param('form_class')
-			);
-
-			// Define default hidden fields
-			$data['hidden_fields'] = array(
-				'ACT' => $this->EE->functions->fetch_action_id('Low_likes', 'toggle_like'),
-				'EID' => $entry_id
-			);
-
-			// Wrap form around tagdata
-			$tagdata = $this->EE->functions->form_declaration($data) . $tagdata . '</form>';
-		}
-
-		// --------------------------------------
-		// Return output: parsed tagdata
-		// --------------------------------------
-
-		return $tagdata;
-
+		$likes = Like::getAllByOwner($this->owner_id);
+		return count($likes);
 	}
+
+	public function total_entries()
+	{
+		$likes = Like::getEntriesByOwner($this->owner_id);
+		return count($likes);
+	}
+
+	public function total_members()
+	{
+		$likes = Like::getMembersByOwner($this->owner_id);
+		return count($likes);
+	}
+
+	public function form()
+	{
+		// Initiate data array for form creation
+		$form = $data = [];
+		$pfx  = 'form:';
+
+		foreach (ee()->TMPL->tagparams as $key => $val) {
+			if (strpos($key, $pfx) !== 0) continue;
+			$form[] = sprintf('%s="%s"', substr($key, strlen($pfx)), htmlspecialchars($val));
+		}
+
+		// Define default hidden fields
+		$data['hidden_fields'] = ['ACT' => ee()->functions->fetch_action_id('Low_likes', 'toggle_like')];
+
+		$output = ee()->functions->form_declaration($data) . ee()->TMPL->tagdata . '</form>';
+
+		if ($form) {
+			$output = str_replace('<form', '<form '.implode(' ', $form), $output);
+		}
+
+		// Wrap form around tagdata
+		return $output;
+	}
+
+	public function entry()
+	{
+		return $this->content('channel');
+	}
+
+	public function member()
+	{
+		return $this->content('member');
+	}
+
+	protected function content($content_type)
+	{
+		$content_id = ee()->TMPL->fetch_param('id');
+
+		if (!$this->owner_id || !$content_id) {
+			ee()->TMPL->log_item('Low Likes: no valid owner ID or content ID given');
+			return ee()->TMPL->no_results();
+		}
+
+		$method = ($content_type == 'member') ? 'getMembersByOwner' : 'getEntriesByOwner';
+		$likes = Like::$method($this->owner_id);
+
+		$vars = [
+			'is_liked' => in_array($content_id, $likes)
+		];
+
+		return ee()->TMPL->parse_variables_row(ee()->TMPL->tagdata, $vars);
+	}
+
+
 
 	// --------------------------------------------------------------------
 
@@ -146,8 +107,9 @@ class Low_likes {
 		// Get entry id from post, member_id from session
 		// --------------------------------------
 
-		$entry_id = $this->EE->input->post('EID');
-		$member_id = $this->EE->session->userdata('member_id');
+		$owner_id = ee()->session->userdata('member_id');
+		$entry_id = ee()->input->post('entry_id') ?: null;
+		$member_id = ee()->input->post('member_id') ?: null;
 
 		// --------------------------------------
 		// if we have an entry_id and a member_id,
@@ -155,26 +117,23 @@ class Low_likes {
 		// depending on whether a record already exists or not
 		// --------------------------------------
 
-		if ($entry_id && $member_id)
+		if ($owner_id && ($entry_id XOR $member_id))
 		{
 			// Data to work with
-			$data = array(
-				'entry_id'  => $entry_id,
-				'member_id' => $member_id
-			);
+			$data = compact('owner_id', 'entry_id', 'member_id');
 
 			// Liked or not?
-			$this->EE->db->where($data);
-			$liked = $this->EE->db->count_all_results('low_likes');
+			ee()->db->where($data);
+			$liked = ee()->db->count_all_results('low_likes');
 
 			if ($liked)
 			{
-				$this->EE->db->delete('low_likes', $data);
+				ee()->db->delete('low_likes', $data);
 			}
 			else
 			{
-				$data['like_date'] = $this->EE->localize->now;
-				$this->EE->db->insert('low_likes', $data);
+				$data['like_date'] = ee()->localize->now;
+				ee()->db->insert('low_likes', $data);
 			}
 
 			// Cater for Ajax requests
@@ -189,45 +148,7 @@ class Low_likes {
 		// Go back to where you came from
 		// --------------------------------------
 
-		$this->EE->functions->redirect($_SERVER['HTTP_REFERER']);
-	}
-
-	// --------------------------------------------------------------------
-
-	/**
-	 * Show entries with most likes
-	 *
-	 * @access     public
-	 * @return     string
-	 */
-	public function popular()
-	{
-		// --------------------------------------
-		// Get entry IDs ordered by count
-		// --------------------------------------
-
-        // Query DB
-        $query = $this->EE->db->select(array('entry_id', 'COUNT(*) AS num_likes'))
-               ->from('low_likes')
-               ->group_by('entry_id')
-               ->having('num_likes >', '0')
-               ->order_by('num_likes', 'desc')
-               ->get();
-
-        // Initiate entry_ids array
-        $entry_ids = array();
-
-        // Flatten the query results
-        foreach ($query->result() AS $row)
-        {
-            $entry_ids[] = $row->entry_id;
-        }
-
-		// --------------------------------------
-		// Call channel:entries
-		// --------------------------------------
-
-		return $this->_channel_entries($entry_ids);
+		ee()->functions->redirect($_SERVER['HTTP_REFERER']);
 	}
 
 	// --------------------------------------------------------------------
@@ -240,98 +161,102 @@ class Low_likes {
 	 */
 	public function entries()
 	{
-		// --------------------------------------
-		// Get member ID
-		// --------------------------------------
-
-		$member_id = $this->EE->session->userdata('member_id');
-
-		// --------------------------------------
-		// Show no results when no member ID
-		// --------------------------------------
-
-		if ( ! $member_id)
-		{
-			return $this->EE->TMPL->no_results();
+		if (!$this->owner_id) {
+			return ee()->TMPL->no_results();
 		}
 
-		// --------------------------------------
-		// Get entry IDs for member
-		// --------------------------------------
-
-        // Query DB
-        $query = $this->EE->db->select('entry_id')
-               ->from('low_likes')
-               ->where('member_id', $member_id)
-               ->order_by('like_date', 'desc')
-               ->get();
-
-        // Initiate entry_ids array
-        $entry_ids = array();
-
-        // Flatten the query results
-        foreach ($query->result() AS $row)
-        {
-            $entry_ids[] = $row->entry_id;
-        }
-
-		// --------------------------------------
-		// Call channel:entries
-		// --------------------------------------
+		$entry_ids = Like::getEntriesByOwner($this->owner_id);
 
 		return $this->_channel_entries($entry_ids);
 	}
 
+	/**
+	 * Get a pipe-separated list of liked Entry IDs
+	 *
+	 * @access     public
+	 * @return     string
+	 */
+	public function entry_ids()
+	{
+		if (!$this->owner_id) {
+			return 0;
+		}
+
+		return ($ids = Like::getEntriesByOwner($this->owner_id))
+			? implode('|', $ids)
+			: '-1';
+	}
+
+	/**
+	 * Get a pipe-separated list of liked Member IDs
+	 *
+	 * @access     public
+	 * @return     string
+	 */
+	public function member_ids()
+	{
+		if (!$this->owner_id) {
+			return 0;
+		}
+
+		return ($ids = Like::getMembersByOwner($this->owner_id))
+			? implode('|', $ids)
+			: '-1';
+	}
+
 	// --------------------------------------------------------------------
 
-    /**
-     * Loads the Channel module and runs its entries() method
-     *
-     * @access      private
-     * @return      string
-     */
-    private function _channel_entries($entry_ids = array())
-    {
+	/**
+	 * Loads the Channel module and runs its entries() method
+	 *
+	 * @access      private
+	 * @return      string
+	 */
+	private function _channel_entries($entry_ids = array())
+	{
 		// --------------------------------------
 		// Return no results if no entry IDs are given
 		// --------------------------------------
 
-    	if (empty($entry_ids))
-    	{
-    		return $this->EE->TMPL->no_results();
-    	}
+		if (empty($entry_ids))
+		{
+			return ee()->TMPL->no_results();
+		}
 
-        // --------------------------------------
-        // Make sure the following params are set
-        // --------------------------------------
+		// --------------------------------------
+		// Make sure the following params are set
+		// --------------------------------------
 
-        $params = array(
-            'dynamic'  => 'no',
-            'paginate' => 'bottom'
-        );
+		$params = array(
+			'dynamic'  => 'no',
+			'paginate' => 'bottom'
+		);
 
-        foreach ($params AS $key => $val)
-        {
-            if ( ! $this->EE->TMPL->fetch_param($key))
-            {
-                $this->EE->TMPL->tagparams[$key] = $val;
-            }
-        }
+		foreach ($params AS $key => $val)
+		{
+			if ( ! ee()->TMPL->fetch_param($key))
+			{
+				ee()->TMPL->tagparams[$key] = $val;
+			}
+		}
 
 		// --------------------------------------
 		// Set the fixed_order parameter
 		// --------------------------------------
 
-    	$this->EE->TMPL->tagparams['fixed_order'] = implode('|', $entry_ids);
+		$param = ee()->TMPL->fetch_param('orderby')
+			? 'entry_id' : 'fixed_order';
+
+		ee()->TMPL->tagparams[$param] = implode('|', $entry_ids);
 
 		// --------------------------------------
 		// Get the Channel module if it doesn't exist yet
 		// --------------------------------------
 
-        if ( ! class_exists('channel'))
-        {
-            require_once PATH_MOD.'channel/mod.channel.php';
-        }
+		if ( ! class_exists('channel'))
+		{
+			require_once PATH_MOD.'channel/mod.channel.php';
+		}
 
 		// --------------------------------------
 		// Create new Channel instance and call entries() method
@@ -340,7 +265,7 @@ class Low_likes {
 		$channel = new Channel;
 
 		return $channel->entries();
-    }
+	}
 
 } // End Class
 
